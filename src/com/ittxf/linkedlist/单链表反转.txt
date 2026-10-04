@@ -1,0 +1,48 @@
+原：h 1 2 3 4 null
+new：h null
+temp = head.next = 1 表示的就是头部下一个节点
+next = null
+1：
+next = 2
+temp.next = null 原本1指向的为2，现在指向null
+new.next = 1
+temp = 2  头部下一个节点连接2
+原：h 1 null
+拆分出来 2 3 4
+1 -> null
+new：h 1 null
+
+2：
+next = 3
+temp.next = 1  原本2指向的3，现在指向1
+new.next = 2
+temp = 3  头部下一个节点连接3
+原：h 1 null
+拆分出来 3 4
+2 -> 1 -> null
+new：h 2 1 null
+
+3：
+next = 4
+temp.next = 2  原本3指向的4，现在指向2
+new.next = 3
+temp = 4  头部下一个节点连接4
+原：h 1 null
+拆分出来 4
+3 -> 2 -> 1 -> null
+new：h 3 2 1 null
+
+3：
+next = null
+temp.next = 3  原本4指向的null，现在指向3
+new.next = 4
+temp = null  头部下一个节点连接null，链表遍历完成了
+原：h 1 null
+4 -> 3 -> 2 -> 1 -> null
+new：h 4 3 2 1 null
+
+4：
+结束
+让原来的链表的头部的第一位替换成new的链表的头部指向的第一位
+原：h 4 3 2 1 null
+new：h 4 3 2 1 null

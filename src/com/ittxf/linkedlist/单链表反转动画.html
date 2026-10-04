@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>单链表反转 · 交互动画（头插法 / 三指针）</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --ink:#1f2430; --sub:#6b7280; --line:#d9dee7;
+    --node:#eef4ff; --nodeBorder:#4a72c9; --sent:#f4f0ff; --sentBorder:#8b5cf6;
+    --link:#8a94a6; --new:#f59e0b; --done:#16a34a; --bad:#dc2626; --stale:#c3c9d4;
+    --code:#282c34; --codeInk:#d7dce5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",Arial,sans-serif}
+  header{padding:18px 24px 10px}
+  h1{margin:0 0 6px;font-size:20px}
+  h1 small{font-weight:400;color:var(--sub);font-size:13px;margin-left:10px}
+  .wrap{max-width:1420px;margin:0 auto;padding:0 20px 40px}
+  .grid{display:grid;grid-template-columns:minmax(560px,1fr) 392px;gap:16px;align-items:start}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card h2{margin:0 0 10px;font-size:13px;letter-spacing:.4px;color:var(--sub);text-transform:uppercase}
+
+  /* 控制条 */
+  .bar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:14px}
+  .grp{display:flex;align-items:center;gap:6px}
+  .grp>span{color:var(--sub);font-size:12px}
+  button{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:7px;
+    padding:6px 12px;cursor:pointer;font-size:13px;transition:.15s}
+  button:hover{border-color:var(--nodeBorder);color:var(--nodeBorder)}
+  button.primary{background:var(--nodeBorder);border-color:var(--nodeBorder);color:#fff}
+  button.primary:hover{background:#3a5fb0;color:#fff}
+  button.on{background:#eef4ff;border-color:var(--nodeBorder);color:var(--nodeBorder);font-weight:600}
+  select,input[type=text]{border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:13px;background:#fff}
+  input[type=text]{width:172px}
+  input[type=range]{width:104px}
+  .prog{font-variant-numeric:tabular-nums;color:var(--sub);font-size:12px;min-width:74px;text-align:right}
+
+  /* 画布 */
+  #stage{width:100%;overflow-x:auto;border-radius:8px;background:
+    linear-gradient(#fbfcfe,#f4f6fa);border:1px dashed #e3e8f0;padding:2px}
+  svg{display:block;font:13px -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  .box{fill:var(--node);stroke:var(--nodeBorder);stroke-width:1.6;rx:8}
+  .box.sent{fill:var(--sent);stroke:var(--sentBorder);stroke-dasharray:5 3}
+  .box.touched{stroke:var(--new);stroke-width:2.6;fill:#fff6e6}
+  .box.bad{stroke:var(--bad);stroke-width:2.6;fill:#fdeaea}
+  .box.dead{fill:#f1f2f4;stroke:#c3c9d4;stroke-dasharray:4 3}
+  text{fill:var(--ink)}
+  text.t-no{font-weight:700;font-size:14px}
+  text.t-name{fill:#39445c;font-size:12px}
+  text.t-cap{fill:var(--sub);font-size:11px}
+  .pill rect{fill:#fff;stroke:var(--link);stroke-width:1.2;rx:9}
+  .link{stroke:var(--link);stroke-width:1.9;fill:none}
+  .link.new{stroke:var(--new);stroke-width:3}
+  .link.done{stroke:var(--done);stroke-width:2.2}
+  .link.bad{stroke:var(--bad);stroke-width:3}
+  .link.stale{stroke:var(--stale);stroke-width:1.6;stroke-dasharray:5 4}
+  .badge rect{fill:#1f2430;rx:7}
+  .badge text{fill:#fff;font-size:11px;font-weight:600}
+
+  /* 解说 */
+  #desc{min-height:58px;margin-top:10px;padding:10px 12px;border-left:3px solid var(--nodeBorder);
+    background:#f2f6fd;border-radius:0 8px 8px 0}
+  #desc b{color:var(--nodeBorder)}
+  #warn{display:none;margin-top:10px;padding:10px 12px;border-radius:8px;background:#fdeaea;
+    border:1px solid #f3b4b4;color:#961717;font-weight:600}
+  #result{display:none;margin-top:10px;padding:10px 12px;border-radius:8px;background:#eaf8ef;
+    border:1px solid #a9dfba;color:#12692f;font-weight:600}
+  #log{margin-top:12px;max-height:126px;overflow-y:auto;font-size:12.5px;color:#43506b}
+  #log div{padding:2px 0;border-bottom:1px dotted #e8ecf3}
+  #log div.cur{color:var(--ink);font-weight:600}
+
+  /* 代码面板 */
+  pre#code{margin:0;background:var(--code);color:var(--codeInk);border-radius:8px;
+    padding:10px 8px;overflow-x:auto;font:12.5px/1.75 Consolas,Menlo,monospace}
+  pre#code .ln{display:block;padding:0 8px;border-radius:5px;white-space:pre;color:#8d96ab}
+  pre#code .ln i{color:#6f7891;font-style:normal}
+  pre#code .ln.act{background:#3d4a63;color:#fff;box-shadow:inset 3px 0 0 var(--new)}
+  pre#code .ln.act i{color:#c9d4e8}
+  /* 变量表 */
+  table{width:100%;border-collapse:collapse;font:12.5px Consolas,Menlo,monospace}
+  th,td{border-bottom:1px solid #eef1f6;padding:5px 6px;text-align:left;white-space:nowrap}
+  th{color:var(--sub);font-weight:600;font-size:11.5px}
+  td.v{color:#27364f;font-weight:700}
+  tr.chg{background:#fff6e6}
+  .foot{margin-top:14px;color:var(--sub);font-size:12.5px}
+  kbd{background:#eceff5;border:1px solid #d5dae4;border-bottom-width:2px;border-radius:4px;
+    padding:0 5px;font:11.5px Consolas,monospace}
+  @media (max-width:1080px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>单链表反转 · 交互动画
+    <small>严格对应 <code>SingleLinkedListDemo.reverseLinkedList()</code> 的执行顺序，节点位置不动，只有 <b>next 指针</b>被重连</small>
+  </h1>
+</div></header>
+
+<div class="wrap">
+  <div class="bar card">
+    <div class="grp"><span>算法</span>
+      <select id="algo">
+        <option value="head">头插法（你代码里的写法，用 reverseHead 哨兵）</option>
+        <option value="three">三指针原地反转（面试主流，不建哨兵）</option>
+      </select>
+    </div>
+    <div class="grp"><span>数据</span>
+      <select id="preset">
+        <option value="0">课堂同款：1 宋江 → 3 吴用 → 4 林冲</option>
+        <option value="1">完整四节点：1 → 2 → 3 → 4</option>
+        <option value="2">只有 1 个节点（触发特判）</option>
+        <option value="3">空链表（触发特判）</option>
+      </select>
+      <input type="text" id="custom" placeholder="或自定义编号，如 1,3,4">
+    </div>
+    <div class="grp"><span>速度</span><input type="range" id="speed" min="260" max="1600" step="20" value="820"></div>
+    <div class="grp">
+      <button id="prev">◀ 上一步</button>
+      <button id="play" class="primary">▶ 播放</button>
+      <button id="next">下一步 ▶</button>
+      <button id="reset">↺ 重置</button>
+    </div>
+    <div class="grp"><span class="prog" id="prog">0 / 0</span></div>
+    <div class="grp"><span>反面教材</span>
+      <button class="bug" data-mode="swap">坑2：②③调换 → 自环</button>
+      <button class="bug" data-mode="lostTail">坑1：先改后存 → 断链</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>链表现场（节点不动，箭头在变）</h2>
+      <div id="stage"></div>
+      <div id="desc"></div>
+      <div id="warn"></div>
+      <div id="result"></div>
+      <div id="log"></div>
+      <div class="foot">快捷键：<kbd>←</kbd> <kbd>→</kbd> 单步 ｜ <kbd>空格</kbd> 播放/暂停 ｜ <kbd>R</kbd> 重置 ｜ <kbd>1</kbd>/<kbd>2</kbd> 切算法</div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <h2>执行到第几行（动画内行号，与你的方法结构一一对应）</h2>
+        <pre id="code"></pre>
+      </div>
+      <div class="card">
+        <h2>指针变量实时值</h2>
+        <table id="vars"><thead><tr><th>变量</th><th>当前指向</th><th>含义</th></tr></thead><tbody></tbody></table>
+        <div class="foot"><b>读表口诀</b>：<code>X.next = Y</code> 表示"X 的箭头指向 Y"。表里每一行都对应画布上的一条箭头，两边对不上就是画错了。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================ 数据准备 ============================ */
+const NAMES = {1:'宋江',2:'卢俊义',3:'吴用',4:'林冲',5:'武松',6:'花荣'};
+const PRESETS = [
+  [{no:1,name:'宋江'},{no:3,name:'吴用'},{no:4,name:'林冲'}],
+  [{no:1,name:'宋江'},{no:2,name:'卢俊义'},{no:3,name:'吴用'},{no:4,name:'林冲'}],
+  [{no:1,name:'宋江'}],
+  []
+];
+const CODES = {
+  head:[
+    [102,'public static void reverseLinkedList(HeroNode head) {'],
+    [103,'    HeroNode temp = head.next;                 // 当前待处理节点'],
+    [104,'    HeroNode next = null;                      // 暂存后继'],
+    [105,'    HeroNode reverseHead = new HeroNode(0,"",""); // 新链表哨兵'],
+    [106,'    // 空链表 / 单节点，无需反转'],
+    [107,'    if (head.next==null || head.next.next==null) return;'],
+    [108,'    while (temp != null) {'],
+    [109,'        next = temp.next;                      // ① 存后路'],
+    [110,'        temp.next = reverseHead.next;          // ② 连到新链最前面'],
+    [111,'        reverseHead.next = temp;               // ③ 哨兵指向它'],
+    [112,'        temp = next;                           // ④ 迈步'],
+    [113,'    }'],
+    [114,'    head.next = reverseHead.next;              // ⑤ 接回原哨兵'],
+    [115,'}']
+  ],
+  three:[
+    [102,'public static void reverseLinkedList(HeroNode head) {'],
+    [107,'    if (head.next==null || head.next.next==null) return;'],
+    [103,'    HeroNode prev = null;                      // 已反转部分的首节点'],
+    [104,'    HeroNode curr = head.next;                 // 正在处理的节点'],
+    [105,'    HeroNode next;                             // 暂存后继'],
+    [108,'    while (curr != null) {'],
+    [109,'        next = curr.next;                      // ① 存后路'],
+    [110,'        curr.next = prev;                      // ② 箭头原地掉头'],
+    [111,'        prev = curr;                           // ③ 已完成部分扩一格'],
+    [112,'        curr = next;                           // ④ 迈步'],
+    [113,'    }'],
+    [114,'    head.next = prev;                          // ⑤ prev 停在原尾=新头'],
+    [115,'}']
+  ]
+};
+
+/* ============================ 帧构造工具 ============================ */
+// 链路用 map 表示：links['n0']='n1'，值 'NULL' 表示空指针，'SELF:n0' 表示自环
+function label(nodes,id){
+  if(id==='NULL'||id==null) return 'null';
+  if(id==='head') return 'head(哨兵)';
+  if(id==='reverseHead') return 'reverseHead(哨兵)';
+  const n = nodes.find(x=>x.id===id);
+  return n ? `${n.no} ${n.name}` : id;
+}
+function initLinks(nodes){
+  const links = {};
+  nodes.forEach((n,i)=> links[n.id] = (i+1<nodes.length)? nodes[i+1].id : 'NULL');
+  links['head'] = nodes.length ? nodes[0].id : 'NULL';
+  links['reverseHead'] = 'NULL';
+  return links;
+}
+function makeRecorder(nodes){
+  const frames=[];
+  return {frames, push(f){
+    frames.push(Object.assign({
+      lines:[], desc:'', hl:{new:[],done:[],bad:[],stale:[],touch:[]},
+      warn:'', result:'', chg:[]
+    }, f));
+  }};
+}
+
+/* 头插法：mode = normal | swap | lostTail */
+function buildHead(nodes, mode){
+  const links = initLinks(nodes);
+  let temp='NULL', next='NULL';
+  const R = makeRecorder(nodes);
+  const V = ()=>({temp,next,head:links.head,reverseHead:links.reverseHead});
+  const push = (f)=>R.push(Object.assign({vars:V(), links:Object.assign({},links)}, f));
+  const N = nodes.length;
+
+  push({lines:[102], desc:`进入 <b>reverseLinkedList(head)</b>。哨兵 <b>head</b> 不存数据、全程不动，这是它存在的意义：所有操作都能对着 <code>head.next</code> 做，不必特判"改头"。`,
+        hl:{touch:['head']}});
+
+  push({lines:[103], desc:`<code>temp = head.next</code> —— <b>temp</b> 落在第一个有效节点上，准备开始搬。`,
+        hl:{touch: nodes.length?[nodes[0].id]:[]}});
+  temp = nodes.length? nodes[0].id : 'NULL';
+
+  push({lines:[104,105], desc:`<code>next = null</code>；<code>new HeroNode(0,"","")</code> 建出一个<b>全新的空哨兵 reverseHead</b>，它的 next 目前是 null。注意：这条语句是<b>唯一一次 new</b>，后面所有节点都是"搬"过来的，不新建数据节点。`,
+        hl:{touch:['reverseHead']}});
+
+  if(N===0 || N===1){
+    push({lines:[106,107], warn:'',
+      desc:N===0 ? `<b>特判生效</b>：<code>head.next == null</code> → 空链表，<code>return</code>，链表保持原样。`
+                 : `<b>特判生效</b>：<code>head.next.next == null</code> → 只有 1 个节点，本来就无所谓正反，<code>return</code> 直接收工。`,
+      result:N===0?'空链表，反转后依然是空链表':'单节点链表，反转后仍是它自己：'+label(nodes,nodes[0].id),
+      hl:{stale:['head']}});
+    return R.frames;
+  }
+  push({lines:[106,107], desc:`特判<b>没</b>命中：链表长度 ≥ 2，继续。`});
+
+  const order = mode==='swap' ? ['setRev','setTemp'] : ['setTemp','setRev'];
+  let guard = 0, bad = false, lost = new Set();
+  while(temp!=='NULL' && guard++ < 12){
+    push({lines:[108], desc:`循环判断：<code>${label(nodes,temp)}</code> != null，进循环处理它。`, hl:{touch:[temp]}});
+
+    if(mode==='lostTail'){                 // 坑1：先改写 temp.next，再去存后继
+      push({lines:[110], desc:`⚠️ 错误顺序第 1 步：<code>temp.next = reverseHead.next</code> = <b>${label(nodes,links.reverseHead)}</b>。<b>temp 原来的后继已经在这一步被抹掉了。</b>`,
+            hl:{bad:[[temp,links.reverseHead]]}});
+      links[temp] = links.reverseHead;
+      next = links[temp];
+      push({lines:[109], desc:`⚠️ 然后才写 <code>next = temp.next</code> —— 可 <code>temp.next</code> 刚被改成了 <b>${label(nodes,next)}</b>，存到的根本不是"后路"。`,
+            chg:['next'], hl:{bad:[[temp,next]]}});
+      links.reverseHead = temp;
+      push({lines:[111], desc:`<code>reverseHead.next = temp</code>，头插完成。`});
+      const remain = nodes.slice(nodes.findIndex(n=>n.id===temp)+1).filter(n=>n.id!==links.reverseHead);
+      remain.forEach(n=>lost.add(n.id));
+      temp = next;
+      bad = true;
+      break;
+    }
+
+    next = links[temp];
+    push({lines:[109], desc:`<b>① 存后路</b>：<code>next = temp.next</code> = <b>${label(nodes,next)}</b>。这一步是"救命步"—— 下一步就要改写 <code>${label(nodes,temp)}.next</code> 了，不先存住，后面的节点会永远丢掉。`,
+          chg:['next'], hl:{done:[[temp,next]]}});
+
+    if(order[0]==='setRev'){               // 坑2：②③ 调换
+      links.reverseHead = temp;
+      push({lines:[111], desc:`⚠️ 错误顺序第 1 步：先做 <code>reverseHead.next = temp</code>。此刻 <code>reverseHead.next</code> 已经变成 <b>${label(nodes,temp)}</b> 本身了。`,
+            hl:{bad:[['reverseHead',temp]]}});
+      next = links[temp];
+      links[temp] = links.reverseHead;     // = temp 自己 → 自环
+      push({lines:[110], desc:`⚠️ 再做 <code>temp.next = reverseHead.next</code>，而 <code>reverseHead.next</code> 现在就是 <b>${label(nodes,temp)}</b> —— 等于让节点<b>指向自己</b>。`,
+            hl:{bad:[[temp,temp]]}});
+      bad = true;
+      push({lines:[112], warn:`💥 自环成了：<code>${label(nodes,temp)}.next == ${label(nodes,temp)}</code>。任何 <code>while(temp!=null) temp=temp.next</code> 都会<b>死循环</b>，程序卡死。
+        口诀：<b>②必须先连前驱，③才能挂牌</b> —— 一旦新链头被更新，"从它回溯"这条信息就没了。`,
+        desc:`反转中断。`, hl:{bad:[['reverseHead',temp],[temp,temp]]}});
+      break;
+    }
+
+    links[temp] = links.reverseHead;
+    push({lines:[110], desc:`<b>② 连前驱</b>：<code>${label(nodes,temp)}.next = reverseHead.next</code> = <b>${label(nodes,links[temp])}</b>。摘下来的节点被挂到"新链表当前的最前面"，它成了新链的<b>尾</b>（当 reverseHead.next 为 null 时，它就成了真正的尾巴）。`,
+          hl:{new:[[temp,links[temp]]], touch:[temp]}});
+
+    links.reverseHead = temp;
+    push({lines:[111], desc:`<b>③ 挂牌</b>：<code>reverseHead.next = ${label(nodes,temp)}</code>。${label(nodes,temp)} 正式成为新链表的第一个节点 —— <b>插到最前面 = 顺序颠倒</b>。`,
+          hl:{new:[['reverseHead',temp]], touch:[temp]}});
+
+    temp = next;
+    push({lines:[112], desc:`<b>④ 迈步</b>：<code>temp = next</code> → <b>${label(nodes,temp)}</b>。已处理的部分每轮增长一格。`,
+          chg:['temp'], hl:{touch: temp==='NULL'?[]:[temp]}});
+  }
+
+  if(bad && mode==='lostTail'){
+    push({lines:[113,114], warn:`💥 断链成了：${[...lost].map(x=>label(nodes,x)).join('、') || '后续节点'} 已经没有任何指针能到达（它们${lost.size>1?'彼此之间还连着':''}，成了一条<b>再也找不回的孤链</b>）。
+      遍历 <code>head</code> 只能看到 <code>${label(nodes,nodes[0].id)}</code>。这就是"<b>改写指针前必须先保存后继</b>"的重量级理由。`,
+      desc:`反转结果错误。`, result:`head → ${label(nodes,links.head)} → … （原链表被截断）`,
+      hl:{dead:[...lost], stale:[['head',links.head]]}});
+    return R.frames;
+  }
+
+  push({lines:[108], desc:`<code>temp == null</code>，全部节点处理完毕，退出循环。此刻新链表长这样：<code>reverseHead → ${chain(nodes,links,'reverseHead')}</code>`});
+  links.head = links.reverseHead;
+  push({lines:[114], desc:`<b>⑤ 接回</b>：<code>head.next = reverseHead.next</code>。原哨兵的线从旧首节点撕下来、改接到新首节点；<code>reverseHead</code> 使命结束，等着被 GC。`,
+        hl:{new:[['head',links.head]], done:allLinks(nodes,links)}});
+  push({lines:[115], desc:`方法返回，反转完成 ✅ 全程<b>没有 new 过任何数据节点</b>，只 new 了一个空哨兵 —— 空间 O(1)。`,
+        result:`遍历结果：${chain(nodes,links,'head')}`, hl:{done:allLinks(nodes,links)}});
+  return R.frames;
+}
+
+/* 三指针原地反转 */
+function buildThree(nodes){
+  const links = initLinks(nodes);
+  let prev='NULL', curr='NULL', next='NULL';
+  const R = makeRecorder(nodes);
+  const V = ()=>({prev,curr,next,head:links.head});
+  const push = (f)=>R.push(Object.assign({vars:V(), links:Object.assign({},links)}, f));
+  const N=nodes.length;
+  push({lines:[102], desc:`三指针版：不再建 <code>reverseHead</code>，只准备三个指针变量，<b>把每个节点的箭头原地调头</b>。`});
+  if(N===0||N===1){
+    push({lines:[107], desc:N===0?`空链表，特判 return。`:`单节点，特判 return。`,
+      result:N===0?'空链表':'单节点链表，反转后仍是自己：'+label(nodes,nodes[0].id)});
+    return R.frames;
+  }
+  push({lines:[107], desc:`长度 ≥ 2，继续。`});
+  prev='NULL'; curr=nodes[0].id;
+  push({lines:[103,104,105], desc:`<code>prev = null</code>（"已反转部分"暂时是空的）、<code>curr = head.next</code> = <b>${label(nodes,curr)}</b>。
+    两个指针把链表切成三段：<b>[已反转 prev 侧] ← curr → [未处理部分]</b>。`,
+    hl:{touch:[curr]}});
+  let g=0;
+  while(curr!=='NULL' && g++<12){
+    push({lines:[108], desc:`<code>curr</code> = ${label(nodes,curr)}，非空，进循环。`, hl:{touch:[curr]}});
+    next = links[curr];
+    push({lines:[109], desc:`<b>① 存后路</b>：<code>next = curr.next</code> = <b>${label(nodes,next)}</b>（同样不可省略）。`, chg:['next'], hl:{done:[[curr,next]]}});
+    links[curr] = prev;
+    push({lines:[110], desc:`<b>② 箭头掉头</b>：<code>${label(nodes,curr)}.next = prev</code> = <b>${label(nodes,prev)}</b>。注意这一步<b>不搬节点、不建节点</b>，只是把方向反过来 —— 这就是"原地"。`,
+          hl:{new:[[curr,links[curr]]], touch:[curr]}});
+    prev = curr;
+    push({lines:[111], desc:`<b>③ 扩一格</b>：<code>prev = curr</code> → "已反转部分"的头现在是 <b>${label(nodes,prev)}</b>。`, chg:['prev'], hl:{touch:[prev]}});
+    curr = next;
+    push({lines:[112], desc:`<b>④ 迈步</b>：<code>curr = next</code> → <b>${label(nodes,curr)}</b>。`, chg:['curr'], hl:{touch:curr==='NULL'?[]:[curr]}});
+  }
+  push({lines:[113], desc:`<code>curr == null</code>，遍历到头。此时 <code>prev</code> 恰好停在<b>原链表的最后一个节点</b> = 新链表的第一个节点。`});
+  links.head = prev;
+  push({lines:[114], desc:`<code>head.next = prev</code>，接回哨兵，完成。比头插法还少 new 一个对象。`,
+        hl:{new:[['head',prev]], done:allLinks(nodes,links)}});
+  push({lines:[115], desc:`反转完成 ✅`, result:`遍历结果：${chain(nodes,links,'head')}`, hl:{done:allLinks(nodes,links)}});
+  return R.frames;
+}
+
+function chain(nodes,links,from){
+  const out=[]; let p=links[from], g=0;
+  while(p!=='NULL' && p && !String(p).startsWith('SELF') && g++<30){ out.push(label(nodes,p)); p=links[p]; }
+  return (from==='head'?'head → ':'') + out.join(' → ') + ' → null';
+}
+function allLinks(nodes,links){
+  const arr=[];
+  Object.keys(links).forEach(k=>{ if(links[k] && links[k]!=='NULL') arr.push([k,links[k]]); });
+  return arr;
+}
+
+/* ============================ 画图 ============================ */
+const G={m:22, sentW:104, sentH:52, nodeW:112, nodeH:62, gap:66, A:76, B:262, pillW:62};
+function geom(nodes){
+  const x0 = G.m + G.sentW + G.gap;
+  const pos={};
+  nodes.forEach((n,i)=> pos[n.id]={x:x0+i*(G.nodeW+G.gap), y:G.A, w:G.nodeW, h:G.nodeH});
+  pos.head={x:G.m, y:G.A, w:G.sentW, h:G.nodeH};
+  pos.reverseHead={x:G.m, y:G.B, w:G.sentW, h:G.sentH};
+  pos.null={x:x0+nodes.length*(G.nodeW+G.gap), y:G.A+16, w:G.pillW, h:30};   // 行尾 null
+  pos._mini={y:G.A+G.nodeH+16};                                             // 中间节点 → null 的小药丸
+  const W = pos.null.x + G.pillW + G.m;
+  const H = algo==='head' ? G.B + Math.max(G.sentH,60) + 34 : G.A + G.nodeH + 120;
+  return {pos,W,H};
+}
+function marker(id,color){ return `<marker id="ah${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${color}"/></marker>`; }
+function linkPath(p, from, to, cls){
+  const f=p[from], t = to==='NULL'||to==null ? null : (to.startsWith('SELF:')?p[to.slice(5)]:p[to]);
+  const fx=f.x+f.w, fy=f.y+f.h/2;
+  let d, endX=0,endY=0, dir='right';
+  if(!t){ // → null
+    const isLast = from!=='head' && from!=='reverseHead' && nodesOrder.indexOf(from)===nodesOrder.length-1;
+    if(from==='head'||from==='reverseHead'){          // 哨兵指向 null：短横箭头
+      d=`M${fx},${fy} L${fx+30},${fy}`;
+    } else if(isLast){ d=`M${fx},${fy} L${G_.pos.null.x},${G_.pos.null.y+15}`; }
+    else { const my=G_.pos._mini.y; d=`M${f.x+f.w/2},${f.y+f.h} L${f.x+f.w/2},${my-3}`; dir='down'; }
+  } else if(t.y===f.y && t.x>fx){ // 同行向右
+    if(t.x-fx<=G.gap+2){ d=`M${fx},${fy} L${t.x},${fy}`; }
+    else { const mid=(fx+t.x)/2, topY=f.y-26; d=`M${fx},${fy-8} Q${mid},${topY} ${t.x},${t.y+t.h/2-8}`; }
+    endX=t.x; endY=t.y+t.h/2;
+  } else if(t.y===f.y && t.x<fx){ // 同行向左（反向箭头）：从底部走廊绕
+    const sx=f.x+f.w/2, sy=f.y+f.h, tx=t.x+t.w/2, ty=t.y+t.h;
+    const cy = f.y+f.h+82;
+    d=`M${sx},${sy} C${sx+28},${cy} ${tx-28},${cy} ${tx},${ty+2}`; endX=tx; endY=ty; dir='up';
+  } else { // 跨行（reverseHead 在下方 → 节点在上方）
+    const sx=f.x+f.w/2, sy=f.y, tx=t.x+t.w/2, ty=t.y+t.h;
+    d=`M${sx},${sy} C${sx},${sy-42} ${tx},${ty+52} ${tx},${ty+2}`; endX=tx; endY=ty; dir='up';
+  }
+  const mk = {right:'ah'+cls, down:'ahd'+cls, up:'ahu'+cls}[dir];
+  return `<path class="link ${cls}" d="${d}" marker-end="url(#${mk})"/>`;
+}
+const CLS={new:'new',done:'done',bad:'bad',stale:'stale',plain:'plain'};
+let nodesOrder=[], G_=null;
+
+function draw(nodes, frame){
+  G_ = geom(nodes);
+  nodesOrder = nodes.map(n=>n.id);
+  const {pos,W,H} = G_;
+  const hl = frame.hl||{};
+  const L = frame.links||{};
+  const isNew=(f,t)=> (hl.new||[]).some(a=>a[0]===f&&a[1]===t);
+  const isBad=(f,t)=> (hl.bad||[]).some(a=>a[0]===f&&a[1]===t);
+  const isDone=(f,t)=> (hl.done||[]).some(a=>a[0]===f&&a[1]===t);
+  const isStale=(f)=> (hl.stale||[]).some(a=>a[0]===f);
+
+  const COLORS={plain:'#8a94a6',new:'#f59e0b',done:'#16a34a',bad:'#dc2626',stale:'#c3c9d4'};
+  // 上/下朝向的箭头（反向链接、跨行链接、→null 短桩要用）
+  const upDown=['plain','new','done','bad','stale'].map(c=>
+      `<marker id="ahu${c}" viewBox="0 0 10 10" refX="5" refY="1" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,10 L5,0 L10,10 z" fill="${COLORS[c]}"/></marker>`+
+      `<marker id="ahd${c}" viewBox="0 0 10 10" refX="5" refY="9" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L5,10 L10,0 z" fill="${COLORS[c]}"/></marker>`).join('');
+
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>
+      ${marker('plain','#8a94a6')}${marker('new','#f59e0b')}${marker('done','#16a34a')}${marker('bad','#dc2626')}${marker('stale','#c3c9d4')}
+      ${upDown}
+    </defs>`;
+
+  // 说明文字
+  s+=`<text class="t-cap" x="${pos.head.x}" y="24">上方一行 = 唯一的节点本体（位置固定不动）；所有箭头 = 各节点的 next 引用</text>`;
+  if(algo==='head') s+=`<text class="t-cap" x="${pos.reverseHead.x}" y="${pos.reverseHead.y-14}">下方 = 头插法的临时哨兵 reverseHead（反转完就被丢弃）</text>`;
+
+  // null 药丸
+  s+=`<g class="pill"><rect x="${pos.null.x}" y="${pos.null.y}" width="${pos.pillW||G.pillW}" height="30" rx="9"/><text x="${pos.null.x+G.pillW/2}" y="${pos.null.y+20}" text-anchor="middle" class="t-cap">null</text></g>`;
+  // 中间节点 → null 的小药丸
+  const lastId = nodes.length ? nodes[nodes.length-1].id : null;
+  const needMini = nodes.filter(n=> L[n.id]==='NULL' && n.id!==lastId);
+  needMini.forEach(n=>{
+    const cx=pos[n.id].x+pos[n.id].w/2, my=pos._mini.y;
+    s+=`<g class="pill"><rect x="${cx-26}" y="${my}" width="52" height="22" rx="8"/><text x="${cx}" y="${my+15}" text-anchor="middle" class="t-cap">null</text></g>`;
+  });
+
+  // 箭头（先画线，再画盒子，让盒子盖住线头）
+  // 中途 head.next 还指着旧首节点，但那个节点已被搬进新链表 —— 这条线此刻无效，画成灰色虚线
+  const headStale = (from)=> from==='head' && algo==='head' && nodes.length && !isNew('head',L.head)
+                    && L.head===nodes[0].id && L.reverseHead!=='NULL' && !isDone('head',L.head);
+  Object.keys(L).forEach(from=>{
+    if(from==='reverseHead' && algo!=='head') return;
+    const to=L[from];
+    let cls='plain';
+    if(isBad(from,to)) cls='bad'; else if(isNew(from,to)) cls='new';
+    else if(isDone(from,to)) cls='done'; else if(isStale(from)||headStale(from)) cls='stale';
+    s+=linkPath(pos, from, to, cls);
+  });
+
+  // 盒子
+  const drawBox=(id,cap,no,name,dead)=>{
+    const p=pos[id]; if(!p) return '';
+    const touch=(hl.touch||[]).includes(id);
+    const badBox=(hl.bad||[]).some(a=>a[0]===id||a[1]===id);
+    const klass='box'+(id==='head'||id==='reverseHead'?' sent':'')+(dead?' dead':'')+(touch&&!dead?' touched':'')+(badBox&&!dead?' bad':'');
+    let o=`<g><rect class="${klass}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="9"/>`;
+    if(id==='head'||id==='reverseHead'){
+      o+=`<text class="t-no" x="${p.x+p.w/2}" y="${p.y+p.h/2-4}" text-anchor="middle">${id}</text>`;
+      o+=`<text class="t-cap" x="${p.x+p.w/2}" y="${p.y+p.h/2+15}" text-anchor="middle">${id==='head'?'哨兵·不动':'哨兵·新建'}</text>`;
+    }else{
+      o+=`<text class="t-no" x="${p.x+p.w/2}" y="${p.y+24}" text-anchor="middle">${no}</text>`;
+      o+=`<text class="t-name" x="${p.x+p.w/2}" y="${p.y+44}" text-anchor="middle">${name}</text>`;
+    }
+    return o+'</g>';
+  };
+  s+=drawBox('head');
+  nodes.forEach(n=> s+=drawBox(n.id,n.no,n.name,(hl.dead||[]).includes(n.id)));
+  if(algo==='head') s+=drawBox('reverseHead');
+
+  // 变量徽章
+  const badges={};
+  (['temp','next','prev','curr']).forEach(v=>{ const val=frame.vars&&frame.vars[v]; if(val&&val!=='NULL') (badges[val]=badges[val]||[]).push(v); });
+  Object.keys(badges).forEach(id=>{
+    const p=pos[id]; if(!p) return;
+    badges[id].forEach((v,i)=>{
+      const bx=p.x+p.w/2-24+i*46-((badges[id].length-1)*22), by=p.y-26;
+      s+=`<g class="badge"><rect x="${bx}" y="${by}" width="44" height="19" rx="7"/><text x="${bx+22}" y="${by+13.5}" text-anchor="middle">${v}</text></g>`;
+    });
+  });
+  s+='</svg>';
+  stage.innerHTML=s;
+}
+
+/* ============================ 渲染与交互 ============================ */
+let algo='head', mode='normal', nodes=[], frames=[], idx=0, timer=null;
+const $=id=>document.getElementById(id);
+const stage=$('stage'), desc=$('desc'), warn=$('warn'), result=$('result'), log=$('log');
+
+function mkNodes(list){ return list.map((d,i)=>({id:'n'+i, no:d.no, name:d.name||('节点'+d.no)})); }
+function currentPreset(){
+  const c=$('custom').value.trim();
+  if(c) return c.split(/[,\s]+/).filter(Boolean).map(x=>{
+    const m=x.split(':'); return {no:+m[0], name:m[1]||(NAMES[+m[0]]||('英雄'+m[0]))};
+  });
+  return PRESETS[+$('preset').value];
+}
+function rebuild(){
+  stop();
+  nodes = mkNodes(currentPreset());
+  frames = algo==='head' ? buildHead(nodes,mode) : buildThree(nodes);
+  idx=0; render();
+}
+function render(){
+  const f=frames[idx];
+  draw(nodes,f);
+  desc.innerHTML=`<b>第 ${idx+1}/${frames.length} 步</b> ｜ ${f.desc}`;
+  warn.style.display = f.warn?'block':'none'; warn.innerHTML=f.warn;
+  result.style.display = f.result?'block':'none'; result.textContent=f.result;
+  // 代码高亮
+  const lines=CODES[algo];
+  $('code').innerHTML=lines.map(([n,txt])=>
+    `<span class="ln${f.lines.includes(n)?' act':''}"><i>${n}</i>${txt.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'})[c])}</span>`).join('');
+  // 变量表
+  const v=f.vars||{};
+  const ROWS = algo==='head'
+    ? [['head','head.next','哨兵，反转中途仍指向旧首节点'],
+       ['reverseHead','reverseHead.next','新链表的当前首节点'],
+       ['temp','temp','正在搬的节点'],['next','next','temp 的备用后路']]
+    : [['head','head.next','哨兵'],['prev','prev','已反转部分的首节点'],
+       ['curr','curr','正在调头的节点'],['next','next','curr 的备用后路']];
+  $('vars').tBodies[0].innerHTML=ROWS.map(([key,name,mean])=>{
+    let val;
+    if(key==='head'||key==='reverseHead') val=label(nodes,(f.links||{})[key]);
+    else val=label(nodes,v[name]);
+    const chg=(f.chg||[]).includes(name)?' class="chg"':'';
+    return `<tr${chg}><td>${name}</td><td class="v">${val}</td><td>${mean}</td></tr>`;
+  }).join('');
+  // 步骤日志
+  log.innerHTML=frames.slice(0,idx+1).map((x,i)=>
+    `<div class="${i===idx?'cur':''}">${i+1}. ${(x.desc||x.warn||'').replace(/<[^>]+>/g,'').slice(0,64)}</div>`).join('');
+  log.scrollTop=log.scrollHeight;
+  $('prog').textContent=`${idx+1} / ${frames.length}`;
+}
+function go(d){ idx=Math.max(0,Math.min(frames.length-1,idx+d)); render(); }
+function stop(){ if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 播放';$('play').classList.add('primary');} }
+function play(){
+  if(timer) return stop();
+  if(idx>=frames.length-1) idx=0;
+  $('play').textContent='❙❙ 暂停';
+  timer=setInterval(()=>{ if(idx>=frames.length-1) return stop(); go(1); }, +$('speed').value);
+}
+$('play').onclick=play; $('next').onclick=()=>{stop();go(1)}; $('prev').onclick=()=>{stop();go(-1)};
+$('reset').onclick=()=>{idx=0;stop();render()};
+$('algo').onchange=e=>{algo=e.target.value;syncAlgoBtn();rebuild()};
+$('preset').onchange=()=>{$('custom').value='';rebuild()};
+$('custom').onchange=rebuild;
+$('speed').oninput=()=>{ if(timer){stop();play();} };
+function syncAlgoBtn(){
+  const head = algo==='head';
+  document.querySelectorAll('.bug').forEach(b=> b.style.opacity = head?1:.35);
+  if(!head && mode!=='normal'){ mode='normal'; }
+}
+document.querySelectorAll('.bug').forEach(b=> b.onclick=()=>{
+  const m=b.dataset.mode;
+  mode = (mode===m)?'normal':m;
+  algo='head'; $('algo').value='head'; syncAlgoBtn();
+  document.querySelectorAll('.bug').forEach(x=> x.classList.toggle('on', x.dataset.mode===mode && mode!=='normal'));
+  rebuild();
+  if(mode!=='normal') desc.innerHTML+=` <span style="color:#961717;font-weight:600">（正在演示反面教材）</span>`;
+});
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  if(e.key==='ArrowRight'){stop();go(1)} else if(e.key==='ArrowLeft'){stop();go(-1)}
+  else if(e.key===' '){e.preventDefault();play()} else if(e.key.toLowerCase()==='r'){idx=0;stop();render()}
+  else if(e.key==='1'||e.key==='2'){ algo=(e.key==='1')?'head':'three'; $('algo').value=algo; syncAlgoBtn(); rebuild(); }
+});
+syncAlgoBtn(); rebuild();
+</script>
+</body>
+</html>
