@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>八皇后 · 递归回溯动画（对照 Queen8.java）</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#fff; --ink:#1f2430; --sub:#6b7280; --line:#dde2ea;
+    --sq:#eef2f8; --sq2:#dbe3f0; --q:#1f2430;
+    --try:#f59e0b; --bad:#dc2626; --ok:#16a34a; --atk:#c7d3ea;
+    --code:#282c34;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",Arial,sans-serif}
+  .wrap{max-width:1500px;margin:0 auto;padding:16px 20px 40px}
+  h1{margin:0 0 4px;font-size:20px}
+  h1 small{font-weight:400;color:var(--sub);font-size:13px;margin-left:10px}
+  .lead{color:var(--sub);font-size:13px;margin:0 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .grid{display:grid;grid-template-columns:340px minmax(420px,1fr) 340px;gap:14px;align-items:start}
+  h2{margin:0 0 10px;font-size:12px;letter-spacing:.4px;color:var(--sub);text-transform:uppercase}
+
+  /* 控制条 */
+  .bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:14px}
+  .grp{display:flex;align-items:center;gap:6px}
+  .grp>span{color:var(--sub);font-size:12px}
+  button,select{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:7px;
+    padding:6px 11px;cursor:pointer;font-size:13px}
+  button:hover{border-color:#4a72c9;color:#4a72c9}
+  button.on{background:#4a72c9;border-color:#4a72c9;color:#fff}
+  input[type=range]{width:120px}
+  .prog{font-variant-numeric:tabular-nums;color:var(--sub);font-size:12px;min-width:96px;text-align:right}
+
+  /* 棋盘 */
+  #board{display:grid;gap:3px;margin:0 auto 12px;max-width:380px}
+  .cell{width:100%;aspect-ratio:1;border-radius:4px;background:var(--sq);display:flex;
+    align-items:center;justify-content:center;font-size:22px;position:relative;transition:.12s}
+  .cell.dark{background:var(--sq2)}
+  .cell.atk{background:#e3ebfa;box-shadow:inset 0 0 0 1px #b9c9e8}
+  .cell.q::after{content:"♛";color:var(--q);font-size:26px}
+  .cell.try{background:#fff3d6;box-shadow:inset 0 0 0 2px var(--try)}
+  .cell.try::after{content:"♛";color:#a8690a}
+  .cell.bad{background:#fdeaea;box-shadow:inset 0 0 0 2px var(--bad)}
+  .cell.bad::after{content:"♛";color:var(--bad)}
+  .cell.last{box-shadow:inset 0 0 0 2px var(--ok)}
+  .axis{display:flex;justify-content:space-between;color:var(--sub);font-size:11px;margin-bottom:4px}
+
+  /* array 可视化 */
+  .arr{display:grid;gap:3px;margin-top:6px}
+  .arr .box{border:1px solid var(--line);border-radius:5px;padding:3px 0;text-align:center;
+    font:13px Consolas,Menlo,monospace;background:#fbfcfe}
+  .arr .box.cur{border-color:var(--try);background:#fff3d6;font-weight:700}
+  .arr .lbl{font-size:10px;color:var(--sub);text-align:center}
+
+  /* 代码 */
+  pre{margin:0;background:var(--code);color:#d7dce5;border-radius:8px;padding:10px 8px;
+    overflow-x:auto;font:12.5px/1.8 Consolas,Menlo,monospace}
+  pre .ln{display:block;padding:0 8px;border-radius:5px;white-space:pre;color:#8d96ab}
+  pre .ln i{color:#6f7891;font-style:normal;display:inline-block;width:30px}
+  pre .ln.act{background:#3d4a63;color:#fff;box-shadow:inset 3px 0 0 var(--try)}
+  pre .ln.act i{color:#c9d4e8}
+
+  /* 解说 */
+  #say{min-height:64px;margin-top:10px;padding:10px 12px;border-left:3px solid #4a72c9;
+    background:#f2f6fd;border-radius:0 8px 8px 0}
+  #say b{color:#274a8f}
+  #say code{background:#e6eefc;padding:0 4px;border-radius:4px;font:12.5px Consolas,monospace}
+
+  /* 调用栈 / 日志 */
+  .stack{font:12.5px Consolas,Menlo,monospace;margin-bottom:10px}
+  .stack .f{border-left:3px solid #4a72c9;background:#f4f7fd;padding:3px 8px;margin-bottom:3px;
+    border-radius:0 5px 5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stack .f.top{border-left-color:var(--try);background:#fff6e2}
+  .stack .empty{color:var(--sub);font-size:12px}
+  #log{max-height:210px;overflow-y:auto;font:12.5px/1.75 Consolas,Menlo,monospace;
+    border-top:1px dashed var(--line);padding-top:6px}
+  #log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #log div.cur{background:#fff6e2;font-weight:700}
+  #log .k-ok{color:var(--ok)} #log .k-bad{color:var(--bad)} #log .k-star{color:#8a4cff;font-weight:700}
+  #log .k-back{color:var(--sub)}
+
+  /* 统计 */
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+  .stat{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:#fbfcfe}
+  .stat b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+  .stat span{font-size:11.5px;color:var(--sub)}
+  #sols{max-height:158px;overflow-y:auto;font:12.5px Consolas,Menlo,monospace}
+  #sols div{padding:2px 6px;border-bottom:1px dotted #eef1f6;cursor:pointer}
+  #sols div:hover{background:#f2f6fd}
+  #sols div.cur{background:#eef4ff;color:#274a8f;font-weight:700}
+  .legend{margin-top:10px;color:var(--sub);font-size:12px;line-height:1.9}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 4px 0 10px;vertical-align:-1px}
+  kbd{background:#eceff5;border:1px solid #d5dae4;border-bottom-width:2px;border-radius:4px;
+    padding:0 5px;font:11.5px Consolas,monospace}
+  @media (max-width:1240px){
+    .grid{grid-template-columns:minmax(280px,340px) minmax(360px,1fr)}
+    #panelRight{grid-column:1/-1}
+  }
+  @media (max-width:820px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>八皇后 · 递归回溯动画
+    <small>逐帧对照 <code>Queen8.java</code> 的 place / judge / print，棋盘、代码行、调用栈三处同步动</small>
+  </h1>
+  <p class="lead">约定：<b>array[行] = 列</b>，一个一维数组就装下整个棋盘（因为算法逐行放，每行至多一个皇后）。
+     冲突只需判两件事：<b>同列</b>、<b>行距 == 列距（对角线）</b>；同行不用判，是"逐行放"白送的。</p>
+
+  <div class="bar card">
+    <div class="grp"><span>棋盘</span>
+      <select id="size"><option value="4">4 × 4（2 个解）</option>
+        <option value="6">6 × 6（4 个解）</option>
+        <option value="8" selected>8 × 8（92 个解）</option></select>
+    </div>
+    <div class="grp">
+      <button id="prev">◀ 上一步</button>
+      <button id="play" class="on">▶ 播放</button>
+      <button id="next">下一步 ▶</button>
+      <button id="nextSol">跳到下一个解 ⏭</button>
+      <button id="reset">↺ 重置</button>
+    </div>
+    <div class="grp"><span>速度</span><input type="range" id="speed" min="40" max="900" step="20" value="220"></div>
+    <div class="grp"><span>每步帧数（影响播放与单步）</span><input type="range" id="jump" min="1" max="200" step="1" value="1"></div>
+    <div class="grp" style="flex:1;min-width:200px"><input type="range" id="seek" min="0" max="0" value="0" style="flex:1"></div>
+    <div class="grp"><span class="prog" id="prog">0 / 0</span></div>
+  </div>
+
+  <div class="grid">
+    <!-- 左：棋盘 + array -->
+    <div class="card">
+      <h2>棋盘（♛ 已定 / 橙 正在试 / 红 冲突）</h2>
+      <div class="axis"><span>列 0</span><span id="colMax"></span></div>
+      <div id="board"></div>
+      <h2 style="margin-top:14px">array[行] = 列</h2>
+      <div class="arr" id="arr"></div>
+      <div class="legend">
+        <span class="dot" style="background:#fff3d6;box-shadow:inset 0 0 0 2px var(--try)"></span>正在试的格子
+        <span class="dot" style="background:#fdeaea;box-shadow:inset 0 0 0 2px var(--bad)"></span>与它冲突的皇后
+        <span class="dot" style="background:#e3ebfa"></span>被它攻击到的格子
+      </div>
+    </div>
+
+    <!-- 中：代码 + 解说 + 日志 -->
+    <div class="card">
+      <h2>Java 代码执行到第几行（行号与 Queen8.java 一致）</h2>
+      <pre id="code"></pre>
+      <div id="say"></div>
+      <h2 style="margin-top:12px">动作时间线（缩进 = 递归深度）</h2>
+      <div id="log"></div>
+      <div class="legend">快捷键：<kbd>←</kbd> <kbd>→</kbd> 单步 ｜ <kbd>空格</kbd> 播放/暂停 ｜
+        <kbd>N</kbd> 跳到下一个解 ｜ <kbd>R</kbd> 重置 ｜ <kbd>4</kbd>/<kbd>6</kbd>/<kbd>8</kbd> 换棋盘</div>
+    </div>
+
+    <!-- 右：调用栈 + 统计 + 解列表 -->
+    <div class="card" id="panelRight">
+      <h2>递归调用栈（栈顶 = 正在执行的那层）</h2>
+      <div class="stack" id="stack"></div>
+      <h2>统计</h2>
+      <div class="stats">
+        <div class="stat"><b id="sJudge">0</b><span>judge 调用次数</span></div>
+        <div class="stat"><b id="sSol">0</b><span>已找到的解</span></div>
+        <div class="stat"><b id="sDepth">0</b><span>当前递归深度</span></div>
+        <div class="stat"><b id="sTotal">92</b><span>本棋盘解总数</span></div>
+      </div>
+      <h2>解的列表（点击可跳过去看）</h2>
+      <div id="sols"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= 代码面板（行号取自 Queen8.java） ================= */
+const CODE = [
+  [13,'public static void main(String[] args) {'],
+  [14,'    Queen8 queen8 = new Queen8();'],
+  [15,'    queen8.place(0);                        // 从第 0 行开始放'],
+  [16,'    System.out.println("一共有" + queen8.count + "种解法");'],
+  [17,'    System.out.println("判断次数为" + queen8.judgeCount);'],
+  [18,'}'],
+  [-1,''],
+  [21,'private void print() {                      // 找到一个解时被调用'],
+  [22,'    for (int i = 0; i < array.length; i++) System.out.print(array[i] + "\\t");'],
+  [24,'    count++;'],
+  [25,'}'],
+  [-1,''],
+  [30,'private boolean judge(int n) {              // 第 n 行放的皇后，跟前面各行冲不冲突'],
+  [31,'    judgeCount++;'],
+  [32,'    for (int i = 0; i < n; i++) {'],
+  [36,'        if (array[i] == array[n]            // 同一列'],
+  [37,'            || Math.abs(n - i) == Math.abs(array[n] - array[i]))  // 对角线：行距==列距'],
+  [38,'            return false;'],
+  [39,'    }'],
+  [40,'    return true;'],
+  [41,'}'],
+  [-1,''],
+  [45,'private void place(int n) {                 // 放第 n 行的皇后'],
+  [46,'    if (n == max) {                         // 8 行都放好了'],
+  [47,'        print();'],
+  [48,'        return;'],
+  [49,'    }'],
+  [51,'    for (int i = 0; i < max; i++) {         // 第 n 行依次试每一列'],
+  [53,'        array[n] = i;                       // 放！'],
+  [55,'        if (judge(n)) {                     // 不冲突才往下走'],
+  [57,'            place(n + 1);                   // 递归放下一行'],
+  [58,'        }'],
+  [60,'    }                                       // 本行所有列试完 → 回溯（返回上一层）'],
+  [61,'}']
+];
+
+/* ================= 帧生成：完全复刻 Java 的递归 ================= */
+/* 帧只存必要信息（棋盘用紧凑字符串），8 皇后约 5 万帧也不占内存 */
+function buildFrames(N) {
+  const frames = [], array = new Array(N).fill(-1), stack = [];
+  let judgeCount = 0, count = 0, lastSol = null;
+  const board = () => array.map(v => v < 0 ? '.' : v).join('');
+  const push = (t, l, n, i, rows, extra) => {
+    const f = { t, l, n, i, rows: rows || [], a: board(), d: stack.length, jc: judgeCount, c: count };
+    frames.push(Object.assign(f, extra || {}));
+    return f;
+  };
+
+  push('start', 15, -1, -1, []);
+  (function place(n) {
+    stack.push(n);
+    push('enter', 45, n, -1, []);
+    if (n === N) {
+      count++;
+      lastSol = array.slice();
+      push('solution', 47, n, -1, [], { sol: array.slice() });
+      stack.pop();
+      push('ret', 48, n, -1, []);
+      return;
+    }
+    for (let i = 0; i < N; i++) {
+      stack[stack.length - 1] = n;
+      array[n] = i;
+      push('try', 53, n, i, []);
+      judgeCount++;
+      push('judge', 31, n, i, []);
+      let bad = -1, why = '';
+      for (let k = 0; k < n; k++) {
+        if (array[k] === array[n]) { bad = k; why = '同在第 ' + array[n] + ' 列'; break; }
+        if (Math.abs(n - k) === Math.abs(array[n] - array[k])) {
+          bad = k; why = '与第 ' + k + ' 行成对角线（行距 ' + (n - k) + ' = 列距 ' + Math.abs(array[n] - array[k]) + '）';
+          break;
+        }
+      }
+      if (bad < 0) {
+        push('ok', 55, n, i, []);
+        place(n + 1);
+        stack.push(n);                       // 回到本层，继续试下一列
+        push('back', 57, n, i, []);
+        stack.pop();
+      } else {
+        push('fail', 55, n, i, [bad], { why });
+      }
+    }
+    array[n] = -1;                           // 本行试完，画面上撤掉（Java 里靠下次覆盖，等价）
+    stack.pop();
+    push('exit', 60, n, -1, []);
+  })(0);
+  push('done', 16, -1, -1, [], { sol: lastSol });   // 末帧保留最后一个解的棋盘，免得“结束”配一张空盘
+  return frames;
+}
+
+/* ================= 每帧的大白话解说 ================= */
+function say(f, N) {
+  const a = f.a.split('').map(c => c === '.' ? -1 : +c);
+  switch (f.t) {
+    case 'start': return '<b>main 里调 place(0)</b>：从第 0 行开始放。数组一开始是 <code>[' +
+      new Array(N).fill(-1).join(', ') + ']</code>，-1 表示该行还没放皇后。';
+    case 'enter': return '<b>进入 place(' + f.n + ')</b>：新开一个栈帧，准备把第 ' + f.n +
+      ' 行的皇后从第 0 列开始逐个试。（<code>for (int i = 0; i &lt; max; i++)</code> 的 <code>i</code> 是这个栈帧私有的）';
+    case 'try': return '<b>array[' + f.n + '] = ' + f.i + '</b>（第 53 行）：先把第 ' + f.n + ' 行的皇后放到第 ' + f.i +
+      ' 列 —— <b>先放再查</b>，冲突了待会会被下一个 i 覆盖掉，所以不用写"撤销"。';
+    case 'judge': return '<b>judge(' + f.n + ')</b>（第 30~41 行）：拿第 ' + f.n + ' 行（第 ' + f.i +
+      ' 列）去跟前面第 0~' + (f.n - 1) + ' 行逐一比：同列？行距等于列距（对角线）？';
+    case 'ok': return '<b>judge(' + f.n + ') = true</b>：跟前面 ' + f.n + ' 个皇后都不冲突 → 可以进入 <b>place(' +
+      (f.n + 1) + ')</b> 放下一行。';
+    case 'fail': return '<b>judge(' + f.n + ') = false</b>：' + f.why + ' → 这一列不行，<code>return false</code>，for 循环直接试下一列（这就是回溯）。';
+    case 'solution': return '<b>n == max（' + N + '）</b>：' + N + ' 行全部放好 → <b>找到一个解！</b> <code>print()</code> 输出 <code>[' +
+      a.join(', ') + ']</code>，<code>count++</code>。';
+    case 'ret': return '<b>return</b>（第 48 行）：这个解处理完了，弹回上一层，让上一层继续试它剩下的列 —— <b>不满足"只找一个解"，我们要把所有解都找出来</b>。';
+    case 'back': return '<b>place(' + (f.n + 1) + ') 返回</b>（第 57 行之后）：第 ' + (f.n + 1) + ' 行往下的所有可能都试完了，回到第 ' +
+      f.n + ' 行，for 循环把 <code>array[' + f.n + ']</code> 覆盖成下一个列号。';
+    case 'exit': return '<b>place(' + f.n + ') 结束</b>：第 ' + f.n + ' 行的 ' + N + ' 列全试完了，返回上一层。这一格在数组里的残留值不要紧，因为 <code>judge</code> 只会看比它小的行号。';
+    case 'done': return '<b>全部结束</b>：共找到 <b>' + f.c + '</b> 个解，<code>judge</code> 被调用了 <b>' + f.jc +
+      '</b> 次。对比一下：不剪枝的话要试 ' + Math.pow(N, N) + ' 种摆法（N^N）。';
+  }
+  return '';
+}
+function tag(f, N) {
+  switch (f.t) {
+    case 'try': return '· 第' + f.n + '行 → 第' + f.i + '列';
+    case 'ok': return '· 第' + f.n + '行 ✓ 不冲突';
+    case 'fail': return '· 第' + f.n + '行 ✗ ' + f.why;
+    case 'solution': return '★ 解 #' + f.c + '：[' + f.sol.join(',') + ']';
+    case 'exit': return '↩ 回溯：第' + f.n + '行试完';
+    case 'ret': return '↩ 返回：解已记录';
+    case 'enter': return '▸ place(' + f.n + ') 进入';
+    default: return '';
+  }
+}
+
+/* 当前皇后的攻击格：同一列 + 两条斜线，全部带边界检查，不会串到别的行 */
+function attackCells(N, row, col) {
+  const set = new Set();
+  if (row < 0 || row >= N || col < 0 || col >= N) return set;
+  for (let r = 0; r < N; r++) {
+    if (r === row) continue;
+    const d = Math.abs(r - row);                       // 行距
+    set.add(r * N + col);                              // 同一列
+    if (col - d >= 0 && col - d < N) set.add(r * N + (col - d));   // 一条斜线
+    if (col + d >= 0 && col + d < N) set.add(r * N + (col + d));   // 另一条斜线
+  }
+  return set;
+}
+
+/* ================= 渲染 ================= */
+let N = 8, frames = [], idx = 0, timer = null, solFrames = [];
+const $ = id => document.getElementById(id);
+
+function render() {
+  const f = frames[idx];
+  const src = (f.t === 'done' && f.sol) ? f.sol.join('') : f.a;   // done 帧回显最后一个解
+  const a = src.split('').map(c => c === '.' ? -1 : +c);
+
+  /* 棋盘 */
+  const board = $('board');
+  board.style.gridTemplateColumns = 'repeat(' + N + ',1fr)';
+  let html = '';
+  const attack = attackCells(N, f.n, a[f.n]);
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      let cls = 'cell' + ((r + c) % 2 ? ' dark' : '');
+      if (a[r] === c) {
+        if (f.t === 'fail' && f.rows.indexOf(r) >= 0) cls += ' q bad';
+        else if (r === f.n && (f.t === 'try' || f.t === 'judge' || f.t === 'ok' || f.t === 'fail')) cls += ' try';
+        else cls += ' q' + (f.t === 'solution' ? ' last' : '');
+      } else if (attack.has(r * N + c)) cls += ' atk';
+      html += '<div class="' + cls + '"></div>';
+    }
+  }
+  board.innerHTML = html;
+  $('colMax').textContent = '列 ' + (N - 1);
+
+  /* array 可视化 */
+  $('arr').style.gridTemplateColumns = 'repeat(' + N + ',1fr)';
+  $('arr').innerHTML = a.map((v, i) =>
+    '<div class="box' + (i === f.n ? ' cur' : '') + '">' + (v < 0 ? '-' : v) + '</div>').join('') +
+    a.map((v, i) => '<div class="lbl">行' + i + '</div>').join('');
+
+  /* 代码高亮 */
+  $('code').innerHTML = CODE.map(([n, txt]) => {
+    const on = n === f.l ? ' act' : '';
+    const body = n < 0 ? '&nbsp;' : txt.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]);
+    return '<span class="ln' + on + '"><i>' + (n < 0 ? '' : n) + '</i>' + body + '</span>';
+  }).join('');
+
+  /* 解说 */
+  $('say').innerHTML = '<b>第 ' + (idx + 1) + ' / ' + frames.length + ' 帧</b> ｜ ' + say(f, N);
+
+  /* 调用栈 */
+  const depth = Math.min(f.d, N);
+  let sh = '';
+  for (let i = depth - 1; i >= 0; i--) {
+    const row = i, col = a[i];
+    sh += '<div class="f' + (i === depth - 1 ? ' top' : '') + '">place(' + row + ') 试第 ' +
+      (col < 0 ? '?' : col) + ' 列</div>';
+  }
+  $('stack').innerHTML = sh || '<div class="empty">' + (f.t === 'done' ? '（栈已空，全部结束）' : '（还没开始递归）') + '</div>';
+
+  /* 统计 */
+  $('sJudge').textContent = f.jc;
+  $('sSol').textContent = f.c;
+  $('sDepth').textContent = depth;
+
+  /* 解列表（只显示已经找到的） */
+  $('sols').innerHTML = solFrames.filter(s => s.idx <= idx).map(s =>
+    '<div class="' + (s.idx === idx ? 'cur' : '') + '" data-i="' + s.idx + '">#' + s.no + ' [' +
+    s.sol.join(' ') + ']</div>').join('') || '<div style="color:#6b7280;font-size:12px">还没有解</div>';
+  const curSol = $('sols').querySelector('.cur');
+  if (curSol) curSol.scrollIntoView({ block: 'nearest' });   // 当前解自动滚进可见区
+
+  /* 时间线 */
+  const from = Math.max(0, idx - 60);
+  let lh = '';
+  for (let i = from; i <= idx; i++) {
+    const g = frames[i], ind = Math.min(g.d, N) * 2;
+    const k = g.t === 'fail' ? 'k-bad' : (g.t === 'ok' || g.t === 'solution' ? (g.t === 'ok' ? 'k-ok' : 'k-star') :
+      (g.t === 'exit' || g.t === 'ret' || g.t === 'back' ? 'k-back' : ''));
+    const txt = tag(g, N);
+    if (!txt) continue;
+    lh += '<div class="' + (i === idx ? 'cur ' : '') + k + '" data-i="' + i + '" style="padding-left:' +
+      (6 + ind * 6) + 'px">' + txt + '</div>';
+  }
+  $('log').innerHTML = lh;
+  $('log').scrollTop = $('log').scrollHeight;
+
+  /* 进度 */
+  $('prog').textContent = (idx + 1) + ' / ' + frames.length;
+  $('seek').value = idx;
+}
+
+/* ================= 控制 ================= */
+function rebuild() {
+  stop();
+  N = +$('size').value;
+  frames = buildFrames(N);
+  solFrames = frames.map((f, i) => f.t === 'solution' ? { idx: i, no: f.c, sol: f.sol } : null).filter(Boolean);
+  idx = 0;
+  $('seek').max = frames.length - 1;
+  $('sTotal').textContent = solFrames.length;
+  render();
+}
+function go(d) { idx = Math.max(0, Math.min(frames.length - 1, idx + d)); render(); }
+function stop() { if (timer) { clearInterval(timer); timer = null; $('play').textContent = '▶ 播放'; $('play').classList.remove('on'); } }
+function play() {
+  if (timer) return stop();
+  if (idx >= frames.length - 1) idx = 0;
+  $('play').textContent = '❙❙ 暂停'; $('play').classList.add('on');
+  tick();
+  timer = setInterval(tick, +$('speed').value);
+}
+function tick() {
+  if (idx >= frames.length - 1) return stop();
+  go(+$('jump').value);
+}
+function nextSolution() {
+  stop();
+  const s = solFrames.find(x => x.idx > idx);
+  if (s) { idx = s.idx; render(); } else { idx = frames.length - 1; render(); }
+}
+$('play').onclick = play;
+$('next').onclick = () => { stop(); go(+$('jump').value); };
+$('prev').onclick = () => { stop(); go(-$('jump').value); };
+$('reset').onclick = () => { idx = 0; stop(); render(); };
+$('nextSol').onclick = nextSolution;
+$('size').onchange = rebuild;
+$('speed').oninput = () => { if (timer) { clearInterval(timer); timer = setInterval(tick, +$('speed').value); } };
+$('jump').oninput = () => { $('jump').blur(); };
+$('seek').oninput = e => { stop(); idx = +e.target.value; render(); };
+$('sols').onclick = e => { const i = e.target.dataset.i; if (i != null) { stop(); idx = +i; render(); } };
+$('log').onclick = e => { const i = e.target.dataset.i; if (i != null) { stop(); idx = +i; render(); } };
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') { stop(); go(+$('jump').value); }
+  else if (e.key === 'ArrowLeft') { stop(); go(-$('jump').value); }
+  else if (e.key === ' ') { e.preventDefault(); play(); }
+  else if (e.key.toLowerCase() === 'n') nextSolution();
+  else if (e.key.toLowerCase() === 'r') { idx = 0; stop(); render(); }
+  else if (e.key === '4' || e.key === '6' || e.key === '8') { $('size').value = e.key; rebuild(); }
+});
+rebuild();
+</script>
+</body>
+</html>
