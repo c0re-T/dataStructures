@@ -18,6 +18,8 @@ flowchart TD
     G --> I["约瑟夫环<br/>环形单向链表 · 双指针出圈"]
     G -.->|"reversePrint 逆序打印"| D
     G --> J["递归与回溯<br/>迷宫 · 八皇后"]
+    J --> K["排序<br/>七种算法同一份数据横向比"]
+    K -->|"二分的前提：先有序"| L["查找<br/>线性 8 万次比较 · 二分 17 次"]
 ```
 
 ## 知识点清单
@@ -35,6 +37,8 @@ flowchart TD
 | 单链表 | `SingleLinkedListDemo.java` | [单链表.md](src/com/ittxf/linkedlist/单链表.md) | 哨兵 head；五种操作的差别全在「temp 从哪起步、跟谁比较」；头插法反转、借栈逆序打印、归并 merge；`getLength` 混入副作用与 `findLastIndexNode` 的两次遍历都单独拎出来复盘 |
 | 双向链表 | `DoubleLinkedListDemo.java` | [双向链表.md](src/com/ittxf/linkedlist/双向链表.md) | 多一根 `pre`，删除从「必须找前驱」变成「自己摘自己」；笔记第四节是一个实测确认的插入 bug（插到中间时后继的 `pre` 没回连） |
 | 约瑟夫环 | `Josepfu.java` | [约瑟夫环.md](src/com/ittxf/linkedlist/约瑟夫环.md) | 环形单向链表；`showBoy` 的终止条件是「绕回来」不是「遇到 null」；`countBoy` 双指针报数出圈 |
+| 排序 | `BubbleSort.java`、`SelectSort.java`、`InsertSort.java`、`ShellSort.java`、`QuickSort.java`、`MergeSort.java`、`RadixSort.java` | [排序.md](src/com/ittxf/sort/排序.md) | 七种排序在**同一份数据**（固定种子）上实测：冒泡 7162ms / 选择 1121ms / 插入 705ms / 希尔移动法 7ms / 快排 8ms / 归并 6.3ms / 基数 2.1ms —— 同为 O(n²) 常数差 10 倍，同一个希尔换个内层写法差 430 倍，基数因为一次都不比大小而绕开 O(n log n) 下界；归并那节实测「合并次数永远是 n-1」（8 万 → 79999 次）与 temp 写入 1,308,928 次；还标出了原 `main` 里“七个程序各跑各的随机数”为何不可比 |
+| 查找 | `SeqSearch.java`、`BinarySearch.java` | [搜索算法.md](src/com/ittxf/search/搜索算法.md) | 8 万数据实测比较次数：线性 80000 次 vs 二分 17 次；连查 1000 次是 6.5ms vs 0.12ms，所以「只查一两次不如线性」；二分**不检查数组有没有序**（实测无序数组 6 个值里 3 个报「不存在」，`Arrays.binarySearch` 返回逐个相同）；`mid ± 1` 少一个就 `StackOverflowError`；`(left+right)/2` 的 int 溢出与 JDK 用 `>>> 1` 的写法 |
 | 递归 | `RecursionTest.java` | [递归.md](src/com/ittxf/recursion/递归.md) | 栈帧视角看 `test(5)` 为何输出 `2 3 4 5`；`println` 放递归前还是后，顺序正好相反；`StackOverflowError` 与 `int` 溢出是两条不同的红线 |
 | 迷宫 | `MazeProblem.java`、`MazeShortestPath.java` | [迷宫与回溯.md](src/com/ittxf/recursion/迷宫与回溯.md) | 同一张地图、同一种约定，**只差“回溯时把格子擦回 0”这一行**：前者找一条通路，后者穷举 9028 条取最短（实测最短 9 步、最长 27 步）；`map.clone()` 浅拷贝会改碎快照 |
 | 八皇后 | `Queen8.java` | [八皇后.md](src/com/ittxf/recursion/八皇后.md) | `array[行] = 列` 的一维建模；`judge` 两个条件（同列 / 行距==列距）；为什么这里**不写撤销语句**也算回溯；实测 92 解 / 15720 次判断，只判同列会变成 40320 = 8! |
@@ -62,6 +66,15 @@ src/com/ittxf/
 │                  DoubleLinkedListDemo.java + 双向链表.md
 │                  Josepfu.java            + 约瑟夫环.md
 │                  TestStack.java          + 栈.md
+├── sort/          BubbleSort.java         ┐
+│                  SelectSort.java          │
+│                  InsertSort.java          ├ 排序.md
+│                  ShellSort.java           │
+│                  QuickSort.java           │
+│                  MergeSort.java           │
+│                  RadixSort.java          ┘
+├── search/        SeqSearch.java          ┐
+│                  BinarySearch.java       ┴ 搜索算法.md
 └── recursion/     RecursionTest.java      + 递归.md
                    MazeProblem.java       ┐
                    MazeShortestPath.java  ┴ 迷宫与回溯.md
@@ -70,19 +83,21 @@ src/com/ittxf/
 
 ## 怎么跑
 
-16 个 `.java` 都带 `main`，IDEA 里直接点绿色三角即可。命令行（PowerShell 用 `;` 分隔，不能用 `&&`）：
+25 个 `.java` 都带 `main`，IDEA 里直接点绿色三角即可。命令行（PowerShell 用 `;` 分隔，不能用 `&&`）：
 
 ```powershell
 # 单个程序：编译 + 运行
 javac -encoding UTF-8 -d out src\com\ittxf\queue\ArrayQueueDemo.java
 java -cp out com.ittxf.queue.ArrayQueueDemo
 
-# 整个 src 一次编译（本机 JDK 21，16 个文件全部通过）
+# 整个 src 一次编译（本机 JDK 21，25 个文件全部通过）
 javac -encoding UTF-8 -d out (Get-ChildItem -Recurse src -Filter *.java).FullName
 ```
 
 几点注意：
 
 - 队列、栈、链表那几个 `*Demo` 跑起来是命令行菜单，靠敲 `s`/`a`/`g`/`l`/`h` 之类的字母选操作，不是自动输出结果。
+- `sort` 包下每个程序的 `main` 会自己生成 80000 个随机数并打印耗时；想拿七种算法做可信对比，得用同一份数据（[排序.md](src/com/ittxf/sort/排序.md) 第十节给了做法）。
+- `search` 包下两个程序的 `main` 都是固定的一小段数组，跑起来只打印一个下标；要做第八节那张「排一次序 vs 扫一千次」的账，得自己造 8 万个数据。
 - `Calculator` 和 `ReversePolishCalculator` 可以传表达式：`java -cp out com.ittxf.stack.Calculator "(3+2)*4-1"`。
 - `sparseArray.java` 会在**运行时工作目录**下生成 `filePath/map.data`（相对路径，IDEA 默认就是项目根）。这是跑出来的产物，已在 `.gitignore` 里忽略；`out/`、`.idea/`、`*.iml` 同样不入库。
