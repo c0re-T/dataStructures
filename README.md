@@ -23,6 +23,8 @@ flowchart TD
     J --> M["二叉树<br/>三种遍历 · 查找 · 删除"]
     M --> N["中序线索化<br/>拿空指针当前驱后继"]
     L --> O["哈希表<br/>数组 + 链表法解决冲突"]
+    M --> P["堆排序<br/>数组下标当完全二叉树"]
+    M --> Q["哈夫曼树与编码<br/>贪心建树 + 变长前缀码"]
 ```
 
 ## 知识点清单
@@ -45,6 +47,9 @@ flowchart TD
 | 二叉树 | `BinaryTreeDemo.java`、`ArrBinaryTreeDemo.java`、`Test.java` | [二叉树.md](src/com/ittxf/tree/二叉树.md) | 同一棵树实测前序 `1 2 4 5 3` / 中序 `4 2 5 1 3` / 后序 `4 5 2 3 1`；找同一个 5 号，前序比 4 个节点、中序 3 个、后序 2 个（与代码注释一致）；`deleteNode` 会把整棵子树带走，`deleteNodeAdvanced` 那句「防止丢失」的挂接实测吃掉了左孩子原本的右子树；顺序存储用 `2i+1`/`2i+2` 当下标指针，且判空那段少了 `return` |
 | 中序线索化 | `ThreadedBinaryTreeDemo.java` | [线索二叉树.md](src/com/ittxf/tree/线索二叉树.md) | 7 个节点 14 个指针域里 6 个填成真线索，实测顺线索走一圈 `4 2 5 1 6 3 7` 只要 O(1) 空间；两个实测代价 —— 线索化之后 `inOrder()`/`preOrder()`/`deleteNode()` 会顺线索绕回祖先爆栈，`preNode` 没复位导致跑第二遍把首尾接成一个环 |
 | 哈希表 | `HashTableDemo.java` | [哈希表.md](src/com/ittxf/hashtable/哈希表.md) | 数组 + 链表法：`id % size` 挑桶、桶里线性扫；实测 10 个人进 5 个桶每条链 2 人，桶数就是代价分摊的份数（写死 5、没有 rehash）；负 id 实测 `AIOOBE`（Java 的 `%` 跟被除数同号），「id 自增」只是注释里的假设，先 15 后 10 桶内就是插入顺序 |
+| 堆排序 | `HeapSort.java`（放在 `tree` 包） | [堆排序.md](src/com/ittxf/tree/堆排序.md) | 补上 排序.md 那条「要最坏保证又不肯花归并那份 temp」的缺口：实测 8 万随机 **5.51 ms**、O(1) 额外空间、最坏也 O(n log n)；`adjustHeap` 靠「先存 temp、大的往上抄、最后落位」把一次下沉压到 1 次写；实测不稳定（同键组原始下标变成 `12 8 4 0`）、全相同数据只要 0.13 ms |
+| 哈夫曼树 | `HuffmanTree.java` | [哈夫曼树.md](src/com/ittxf/huffmantree/哈夫曼树.md) | 每次合并权值最小的两棵；实测 `{13,7,8,3,29,6,1}` → 根 67、前序 `67 29 38 15 7 8 23 10 4 1 3 6 13`、WPL 157（等于所有非叶子权值之和）；指出「每轮 `Collections.sort`」是 O(n² log n)，该换 `PriorityQueue` |
+| 哈夫曼编码 | `HuffmanCode.java` | [哈夫曼编码.md](src/com/ittxf/huffmancode/哈夫曼编码.md) | 40 字节 → 133 位 → **17 字节**，解压逐字一致；编码表实测空格只占 2 位、`y` 要 5 位；两个实测事故 —— 只有一种字符时压成 0 字节、解压成空串，`"ab"` 因最后一组以 0 开头被 `toBinaryString` 吃掉前导 0 而只剩 `b` |
 | 递归 | `RecursionTest.java` | [递归.md](src/com/ittxf/recursion/递归.md) | 栈帧视角看 `test(5)` 为何输出 `2 3 4 5`；`println` 放递归前还是后，顺序正好相反；`StackOverflowError` 与 `int` 溢出是两条不同的红线 |
 | 迷宫 | `MazeProblem.java`、`MazeShortestPath.java` | [迷宫与回溯.md](src/com/ittxf/recursion/迷宫与回溯.md) | 同一张地图、同一种约定，**只差“回溯时把格子擦回 0”这一行**：前者找一条通路，后者穷举 9028 条取最短（实测最短 9 步、最长 27 步）；`map.clone()` 浅拷贝会改碎快照 |
 | 八皇后 | `Queen8.java` | [八皇后.md](src/com/ittxf/recursion/八皇后.md) | `array[行] = 列` 的一维建模；`judge` 两个条件（同列 / 行距==列距）；为什么这里**不写撤销语句**也算回溯；实测 92 解 / 15720 次判断，只判同列会变成 40320 = 8! |
@@ -87,7 +92,10 @@ src/com/ittxf/
 │                  ArrBinaryTreeDemo.java   ├ 二叉树.md
 │                  Test.java               ┘
 │                  ThreadedBinaryTreeDemo.java + 线索二叉树.md
+│                  HeapSort.java           + 堆排序.md
 ├── hashtable/     HashTableDemo.java      + 哈希表.md
+├── huffmantree/   HuffmanTree.java        + 哈夫曼树.md
+├── huffmancode/   HuffmanCode.java        + 哈夫曼编码.md
 └── recursion/     RecursionTest.java      + 递归.md
                    MazeProblem.java       ┐
                    MazeShortestPath.java  ┴ 迷宫与回溯.md
@@ -96,14 +104,14 @@ src/com/ittxf/
 
 ## 怎么跑
 
-32 个 `.java` 都带 `main`，IDEA 里直接点绿色三角即可。命令行（PowerShell 用 `;` 分隔，不能用 `&&`）：
+35 个 `.java` 都带 `main`，IDEA 里直接点绿色三角即可。命令行（PowerShell 用 `;` 分隔，不能用 `&&`）：
 
 ```powershell
 # 单个程序：编译 + 运行
 javac -encoding UTF-8 -d out src\com\ittxf\queue\ArrayQueueDemo.java
 java -cp out com.ittxf.queue.ArrayQueueDemo
 
-# 整个 src 一次编译（本机 JDK 21，32 个文件全部通过）
+# 整个 src 一次编译（本机 JDK 21，35 个文件全部通过）
 javac -encoding UTF-8 -d out (Get-ChildItem -Recurse src -Filter *.java).FullName
 ```
 
@@ -113,6 +121,7 @@ javac -encoding UTF-8 -d out (Get-ChildItem -Recurse src -Filter *.java).FullNam
 - `sort` 包下每个程序的 `main` 会自己生成 80000 个随机数并打印耗时；想拿七种算法做可信对比，得用同一份数据（[排序.md](src/com/ittxf/sort/排序.md) 第十节给了做法）。
 - `search` 包下四个程序的 `main` 都是固定的一小段数组，跑起来只打印一个下标；要做第十节那张「排一次序 vs 扫一千次」的账，得自己造 8 万个数据。
 - `tree` 包下三个 `*Demo` 会把整棵树的遍历结果打满屏，`Test.java` 跑起来什么都不打印（只有 `ArrayList` 扩容的注释）。
+- `huffmantree` / `huffmancode` 两个 `main` 会把建树过程、编码表、压缩后的字节数组一路打出来，是这三篇里唯一能"一行命令看完整个流程"的；`tree/HeapSort.java` 和 `sort` 包一样是自己造 8 万个随机数打印耗时。
 - `hashtable` 包下是命令行菜单（`add`/`list`/`find`/`exit`），也可以整串输入用管道喂给标准输入，见 哈希表.md 第六节。
 - `Calculator` 和 `ReversePolishCalculator` 可以传表达式：`java -cp out com.ittxf.stack.Calculator "(3+2)*4-1"`。
 - `sparseArray.java` 会在**运行时工作目录**下生成 `filePath/map.data`（相对路径，IDEA 默认就是项目根）。这是跑出来的产物，已在 `.gitignore` 里忽略；`out/`、`.idea/`、`*.iml` 同样不入库。
