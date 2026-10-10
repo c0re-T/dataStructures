@@ -25,6 +25,8 @@ flowchart TD
     L --> O["哈希表<br/>数组 + 链表法解决冲突"]
     M --> P["堆排序<br/>数组下标当完全二叉树"]
     M --> Q["哈夫曼树与编码<br/>贪心建树 + 变长前缀码"]
+    M --> R["二叉排序树<br/>左小右大 · 中序即有序"]
+    L -.->|"把前提做进结构里"| R
 ```
 
 ## 知识点清单
@@ -46,10 +48,11 @@ flowchart TD
 | 查找 | `SeqSearch.java`、`BinarySearch.java`、`InsertValueSearch.java`、`FibonacciSearch.java` | [搜索算法.md](src/com/ittxf/search/搜索算法.md) | 8 万数据实测比较次数：线性 80000 次 vs 二分 17 次；连查 1000 次是 6.5ms vs 0.12ms，所以「只查一两次不如线性」；二分**不检查数组有没有序**（实测无序数组 6 个值里 3 个报「不存在」，`Arrays.binarySearch` 返回逐个相同）；`mid ± 1` 少一个就 `StackOverflowError`；插值在等差数据上实测一次命中（二分要 12~15 次），但数据不均匀要 101 次、数组全相同会除零、10 万个数据找 50000 会因乘法溢出爆栈；斐波那契的 `maxSize = 20` 就是 4181 的硬上限（8 万数据实测 AIOOBE） |
 | 二叉树 | `BinaryTreeDemo.java`、`ArrBinaryTreeDemo.java`、`Test.java` | [二叉树.md](src/com/ittxf/tree/二叉树.md) | 同一棵树实测前序 `1 2 4 5 3` / 中序 `4 2 5 1 3` / 后序 `4 5 2 3 1`；找同一个 5 号，前序比 4 个节点、中序 3 个、后序 2 个（与代码注释一致）；`deleteNode` 会把整棵子树带走，`deleteNodeAdvanced` 那句「防止丢失」的挂接实测吃掉了左孩子原本的右子树；顺序存储用 `2i+1`/`2i+2` 当下标指针，且判空那段少了 `return` |
 | 中序线索化 | `ThreadedBinaryTreeDemo.java` | [线索二叉树.md](src/com/ittxf/tree/线索二叉树.md) | 7 个节点 14 个指针域里 6 个填成真线索，实测顺线索走一圈 `4 2 5 1 6 3 7` 只要 O(1) 空间；两个实测代价 —— 线索化之后 `inOrder()`/`preOrder()`/`deleteNode()` 会顺线索绕回祖先爆栈，`preNode` 没复位导致跑第二遍把首尾接成一个环 |
+| 二叉排序树 | `BinarySortTreeDemo.java` | [二叉排序树.md](src/com/ittxf/binarysorttree/二叉排序树.md) | 把「有序」做进结构里：中序实测 `1 2 3 5 7 9 10 12`，插完不用排序；形状完全由插入顺序决定，1 万个数据顺序插高度 10000（查最大值比 10000 次）、随机插高度 28（只比 8 次）；双孩子删除是「拿右子树最小值抄过来再删掉它」，改的是值不是节点身份；实测两个会当场炸的 bug —— 单孩子分支漏判 `parent.left`（右斜链一删就 NPE，左斜链却不炸），`delRightTreeMin` 按值调 `delete` 撞上重复值就无限互递归爆栈；20000 组随机差分：18.9% 的删除炸掉，但 0 次给出错答案 |
 | 哈希表 | `HashTableDemo.java` | [哈希表.md](src/com/ittxf/hashtable/哈希表.md) | 数组 + 链表法：`id % size` 挑桶、桶里线性扫；实测 10 个人进 5 个桶每条链 2 人，桶数就是代价分摊的份数（写死 5、没有 rehash）；负 id 实测 `AIOOBE`（Java 的 `%` 跟被除数同号），「id 自增」只是注释里的假设，先 15 后 10 桶内就是插入顺序 |
 | 堆排序 | `HeapSort.java`（放在 `tree` 包） | [堆排序.md](src/com/ittxf/tree/堆排序.md) | 补上 排序.md 那条「要最坏保证又不肯花归并那份 temp」的缺口：实测 8 万随机 **5.51 ms**、O(1) 额外空间、最坏也 O(n log n)；`adjustHeap` 靠「先存 temp、大的往上抄、最后落位」把一次下沉压到 1 次写；实测不稳定（同键组原始下标变成 `12 8 4 0`）、全相同数据只要 0.13 ms |
 | 哈夫曼树 | `HuffmanTree.java` | [哈夫曼树.md](src/com/ittxf/huffmantree/哈夫曼树.md) | 每次合并权值最小的两棵；实测 `{13,7,8,3,29,6,1}` → 根 67、前序 `67 29 38 15 7 8 23 10 4 1 3 6 13`、WPL 157（等于所有非叶子权值之和）；指出「每轮 `Collections.sort`」是 O(n² log n)，该换 `PriorityQueue` |
-| 哈夫曼编码 | `HuffmanCode.java` | [哈夫曼编码.md](src/com/ittxf/huffmancode/哈夫曼编码.md) | 40 字节 → 133 位 → **17 字节**，解压逐字一致；编码表实测空格只占 2 位、`y` 要 5 位；两个实测事故 —— 只有一种字符时压成 0 字节、解压成空串，`"ab"` 因最后一组以 0 开头被 `toBinaryString` 吃掉前导 0 而只剩 `b` |
+| 哈夫曼编码 | `HuffmanCode.java` | [哈夫曼编码.md](src/com/ittxf/huffmancode/哈夫曼编码.md) | 40 字节 → 133 位 → **17 字节**，解压逐字一致；编码表实测空格只占 2 位、`y` 要 5 位；加上 `zipFile`/`unZipFile` 之后是「压缩字节 + 序列化的码表」两笔账，实测文本压到 71.5%、png 只到 90.7%、已经是 zip 的数据反而变大 111.6%，40 字节的小文件落盘变 353 字节；三个实测事故 —— 只有一种字符时压成 0 字节、解压成空串（10000 字节的同字符文件解出 0 字节还照打「成功」），最后一字节不补高位时四类末段只有一类全对（300 组随机短文本失败率 48%），`huffmanCodes` 是 static 从不清空 → 同进程连压两个字符集不同的文件 200 组里 171 组被静默解错 |
 | 递归 | `RecursionTest.java` | [递归.md](src/com/ittxf/recursion/递归.md) | 栈帧视角看 `test(5)` 为何输出 `2 3 4 5`；`println` 放递归前还是后，顺序正好相反；`StackOverflowError` 与 `int` 溢出是两条不同的红线 |
 | 迷宫 | `MazeProblem.java`、`MazeShortestPath.java` | [迷宫与回溯.md](src/com/ittxf/recursion/迷宫与回溯.md) | 同一张地图、同一种约定，**只差“回溯时把格子擦回 0”这一行**：前者找一条通路，后者穷举 9028 条取最短（实测最短 9 步、最长 27 步）；`map.clone()` 浅拷贝会改碎快照 |
 | 八皇后 | `Queen8.java` | [八皇后.md](src/com/ittxf/recursion/八皇后.md) | `array[行] = 列` 的一维建模；`judge` 两个条件（同列 / 行距==列距）；为什么这里**不写撤销语句**也算回溯；实测 92 解 / 15720 次判断，只判同列会变成 40320 = 8! |
@@ -96,6 +99,7 @@ src/com/ittxf/
 ├── hashtable/     HashTableDemo.java      + 哈希表.md
 ├── huffmantree/   HuffmanTree.java        + 哈夫曼树.md
 ├── huffmancode/   HuffmanCode.java        + 哈夫曼编码.md
+├── binarysorttree/ BinarySortTreeDemo.java + 二叉排序树.md
 └── recursion/     RecursionTest.java      + 递归.md
                    MazeProblem.java       ┐
                    MazeShortestPath.java  ┴ 迷宫与回溯.md
@@ -104,14 +108,14 @@ src/com/ittxf/
 
 ## 怎么跑
 
-35 个 `.java` 都带 `main`，IDEA 里直接点绿色三角即可。命令行（PowerShell 用 `;` 分隔，不能用 `&&`）：
+36 个 `.java` 都带 `main`，IDEA 里直接点绿色三角即可。命令行（PowerShell 用 `;` 分隔，不能用 `&&`）：
 
 ```powershell
 # 单个程序：编译 + 运行
 javac -encoding UTF-8 -d out src\com\ittxf\queue\ArrayQueueDemo.java
 java -cp out com.ittxf.queue.ArrayQueueDemo
 
-# 整个 src 一次编译（本机 JDK 21，35 个文件全部通过）
+# 整个 src 一次编译（本机 JDK 21，36 个文件全部通过）
 javac -encoding UTF-8 -d out (Get-ChildItem -Recurse src -Filter *.java).FullName
 ```
 
@@ -121,7 +125,8 @@ javac -encoding UTF-8 -d out (Get-ChildItem -Recurse src -Filter *.java).FullNam
 - `sort` 包下每个程序的 `main` 会自己生成 80000 个随机数并打印耗时；想拿七种算法做可信对比，得用同一份数据（[排序.md](src/com/ittxf/sort/排序.md) 第十节给了做法）。
 - `search` 包下四个程序的 `main` 都是固定的一小段数组，跑起来只打印一个下标；要做第十节那张「排一次序 vs 扫一千次」的账，得自己造 8 万个数据。
 - `tree` 包下三个 `*Demo` 会把整棵树的遍历结果打满屏，`Test.java` 跑起来什么都不打印（只有 `ArrayList` 扩容的注释）。
-- `huffmantree` / `huffmancode` 两个 `main` 会把建树过程、编码表、压缩后的字节数组一路打出来，是这三篇里唯一能"一行命令看完整个流程"的；`tree/HeapSort.java` 和 `sort` 包一样是自己造 8 万个随机数打印耗时。
+- `huffmantree` 的 `main` 会把建树过程和前序遍历一路打出来；`huffmancode` 的 `main` 现在压的是**字符串**，最后还会去读 `filePath/pg.png.huffman.zip` 做一次文件解压——`filePath/` 不入库，clone 下来这一句会打一段 `FileNotFoundException` 栈（程序不会崩，把 `zipFile` 那两行注释放开、自己放张图进 `filePath/` 就正常了），细节见 哈夫曼编码.md 第七、八节。`tree/HeapSort.java` 和 `sort` 包一样是自己造 8 万个随机数打印耗时。
+- `binarysorttree` 的 `main` 只打印四段中序遍历（共 27 行），是「插入 → 三种删除」最短的一条可跑路径；但它最后一行的文案写的是「删除节点 7」、代码删的是 10，见 二叉排序树.md 第一节。
 - `hashtable` 包下是命令行菜单（`add`/`list`/`find`/`exit`），也可以整串输入用管道喂给标准输入，见 哈希表.md 第六节。
 - `Calculator` 和 `ReversePolishCalculator` 可以传表达式：`java -cp out com.ittxf.stack.Calculator "(3+2)*4-1"`。
 - `sparseArray.java` 会在**运行时工作目录**下生成 `filePath/map.data`（相对路径，IDEA 默认就是项目根）。这是跑出来的产物，已在 `.gitignore` 里忽略；`out/`、`.idea/`、`*.iml` 同样不入库。

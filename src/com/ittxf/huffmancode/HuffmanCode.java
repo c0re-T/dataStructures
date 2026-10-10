@@ -1,5 +1,6 @@
 package com.ittxf.huffmancode;
 
+import java.io.*;
 import java.util.*;
 
 public class HuffmanCode {
@@ -40,6 +41,15 @@ public class HuffmanCode {
         byte[] decode = decode(huffmanBytes, huffmanCodes);
         System.out.println("解码后的字符数组 = " + Arrays.toString(decode)); // 输出解码后的字符数组
         System.out.println("解码后的字符串 = " + new String(decode)); // 输出解码后的字符串
+
+        // 测试压缩文件和解压文件
+        // String srcFile = "E:\\Code\\fullstack\\dataStructures\\dataStructures\\filePath\\pg.png";
+        // String dstFile = "E:\\Code\\fullstack\\dataStructures\\dataStructures\\filePath\\pg.png.huffman.zip";
+        // zipFile(srcFile, dstFile);
+
+        String zipFile = "E:\\Code\\fullstack\\dataStructures\\dataStructures\\filePath\\pg.png.huffman.zip";
+        String dstFile = "E:\\Code\\fullstack\\dataStructures\\dataStructures\\filePath\\pg.unzip.png";
+        unZipFile(zipFile, dstFile);
     }
 
     /**
@@ -239,14 +249,14 @@ public class HuffmanCode {
             // 最后一个字节：需要截取为8位(！isLastByte)；中间的字节：不截取，直接拼接
             stringBuilder.append(getBinaryString(!isLastByte, huffmanByte));
         }
-        System.out.println("赫夫曼字节数组对应的二进制字符串=" + stringBuilder.toString());
+        // System.out.println("赫夫曼字节数组对应的二进制字符串=" + stringBuilder.toString());
         // 2 把字符串安装指定的赫夫曼编码进行解码
         // 把赫夫曼编码表进行调换，因为反向查询a->100 100->a
         Map<String, Byte> map = new HashMap<>();
         for (Map.Entry<Byte, String> entry : huffmanCodes.entrySet()) {
             map.put(entry.getValue(), entry.getKey());
         }
-        System.out.println("反向查询map=" + map);
+        // System.out.println("反向查询map=" + map);
 
         // 创建一个集合，用于存储byte
         List<Byte> bytes = new ArrayList<>();
@@ -276,6 +286,67 @@ public class HuffmanCode {
             b[i] = bytes.get(i);
         }
         return b;
+    }
+
+    /**
+     * 文件压缩
+     * @param srcFile 原文件全路径
+     * @param dstFile 压缩后文件目标全路径
+     */
+    public static void zipFile(String srcFile, String dstFile) {
+        try (
+            // 因为文件输入输出只认byte，所以需要创建对象流对java对象进行序列化写入和读取
+            // 流写在括号里，会自动关闭（顺序：先关 oos，再关 fos，最后关 fis）
+            FileInputStream fis = new FileInputStream(srcFile);
+            FileOutputStream fos = new FileOutputStream(dstFile); // 创建文件输出流，相当于创建目标文件
+            ObjectOutputStream oos = new ObjectOutputStream(fos); // 创建对象输出流，用于序列化写入对象
+        ) {
+            // 把硬盘文件读成内存里的 byte[]
+            byte[] b = new byte[fis.available()];
+            fis.read(b); // fis -> b
+
+            // 使用赫夫曼编码对byte[]数组进行压缩
+            byte[] huffmanBytes = huffmanZip(b);
+
+            // 写入压缩后的字节数组和编码表 huffman... -> oos
+            // oos 内部自动调用了底层 fos.write(字节)
+            // 把对象（byte[]、Map、List等）直接序列化写入
+            oos.writeObject(huffmanBytes); // 把压缩后的字节数组写入
+            oos.writeObject(huffmanCodes); // 把赫夫曼编码表写入
+
+            System.out.println("压缩成功！");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 文件解压
+     * @param zipFile 需要解压缩文件全路径
+     * @param dstFile 解压后文件目标全路径
+     */
+    public static void unZipFile(String zipFile, String dstFile) {
+        try (
+            // 创建文件输入流，读取压缩文件
+            FileInputStream fis = new FileInputStream(zipFile);
+            // 创建对象输入流，反序列化读取对象
+            ObjectInputStream ois = new ObjectInputStream(fis);
+            // 创建文件输出流，相当于创建目标文件
+            FileOutputStream fos = new FileOutputStream(dstFile);
+        ) {
+            // 读取压缩后的字节数组和编码表，存顺序就是读顺序 huffman... <- ois
+            byte[] huffmanBytes = (byte[]) ois.readObject();
+            Map<Byte, String> huffmanCodes = (Map<Byte, String>) ois.readObject();
+
+            // 解码
+            byte[] bytes = decode(huffmanBytes, huffmanCodes);
+
+            // 需要手动写入目标文件
+            fos.write(bytes);
+            System.out.println("解压成功！");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
 
